@@ -123,9 +123,10 @@ void nrf_rpc_os_msg_set(struct nrf_rpc_os_msg *msg, const uint8_t *data,
  * @param[out] data Received data pointer. Data is passed as a pointer, so no
  *                  copying is done.
  * @param[out] len  Length of the `data`.
+ *
+ * @return 0 on success or negative error code.
  */
-void nrf_rpc_os_msg_get(struct nrf_rpc_os_msg *msg, const uint8_t **data,
-			size_t *len);
+int nrf_rpc_os_msg_get(struct nrf_rpc_os_msg *msg, const uint8_t **data, size_t *len);
 
 /** @brief Get TLS (Thread Local Storage) for nRF RPC.
  *

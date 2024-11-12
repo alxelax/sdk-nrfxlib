@@ -837,7 +837,7 @@ void nrf_rpc_decoding_done(const struct nrf_rpc_group *group, const uint8_t *pac
  * @param[out] rsp_len    If not NULL contains response packet length.
  * @return 0 on success or negative error code.
  */
-static void wait_for_response(const struct nrf_rpc_group *group, struct nrf_rpc_cmd_ctx *cmd_ctx,
+static int wait_for_response(const struct nrf_rpc_group *group, struct nrf_rpc_cmd_ctx *cmd_ctx,
 			      const uint8_t **rsp_packet, size_t *rsp_len)
 {
 	size_t len;
@@ -849,12 +849,14 @@ static void wait_for_response(const struct nrf_rpc_group *group, struct nrf_rpc_
 	NRF_RPC_DBG("Waiting for a response");
 
 	do {
-		nrf_rpc_os_msg_get(&cmd_ctx->recv_msg, &packet, &len);
+		if (nrf_rpc_os_msg_get(&cmd_ctx->recv_msg, &packet, &len)) {
+			return -NRF_ETIMEDOUT;
+		}
 
 		NRF_RPC_ASSERT(packet != NULL);
 
 		if (packet == RESPONSE_HANDLED_PTR) {
-			return;
+			return 0;
 		}
 
 		type = parse_incoming_packet(cmd_ctx, packet, len);
@@ -876,6 +878,8 @@ static void wait_for_response(const struct nrf_rpc_group *group, struct nrf_rpc_
 
 		nrf_rpc_decoding_done(group, &packet[NRF_RPC_HEADER_SIZE]);
 	}
+
+	return 0;
 }
 
 int nrf_rpc_cmd_common(const struct nrf_rpc_group *group, uint32_t cmd,
@@ -928,7 +932,7 @@ int nrf_rpc_cmd_common(const struct nrf_rpc_group *group, uint32_t cmd,
 	err = send(group, full_packet, len + NRF_RPC_HEADER_SIZE);
 
 	if (err >= 0) {
-		wait_for_response(group, cmd_ctx, rsp_packet, rsp_len);
+		err = wait_for_response(group, cmd_ctx, rsp_packet, rsp_len);
 	}
 
 	cmd_ctx->handler = old_handler;
